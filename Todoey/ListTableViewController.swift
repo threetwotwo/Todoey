@@ -10,7 +10,11 @@ import UIKit
 
 class ListTableViewController: UITableViewController {
 
-	let itemArray = ["Sleep", "Eat", "Poop"]
+	@IBAction func addButtonPressed(_ sender: UIBarButtonItem) {
+		createAlert(title: "Add new item", message: "")
+	}
+
+	var itemArray = ["Sleep", "Eat", "Poop"]
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -46,6 +50,18 @@ class ListTableViewController: UITableViewController {
 		}
 	}
 
+	func createAlert(title: String, message: String) {
+		let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
+		alert.addAction(UIAlertAction(title: "OK", style: .default) { (completion) in
+			print("Added item")
+			self.itemArray.append(alert.textFields?.first?.text ?? "")
+			self.tableView.reloadData()
+			})
+		alert.addTextField { (textField) in
+			textField.placeholder = "Enter a to-do"
+		}
+		present(alert, animated: true)
+	}
 
 
 }
