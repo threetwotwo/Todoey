@@ -14,24 +14,23 @@ class ListTableViewController: UITableViewController {
 		createAlert(title: "Add new item", message: "")
 	}
 
-	var itemArray = ["Sleep", "Eat", "Poop"]
+	var itemArray: [String] = []
 
-    override func viewDidLoad() {
-        super.viewDidLoad()
+	override func viewDidLoad() {
+		super.viewDidLoad()
 
-        // Uncomment the following line to preserve selection between presentations
-        // self.clearsSelectionOnViewWillAppear = false
+		if let items = UserDefaults.standard.array(forKey: "items") as? [String] {
+			itemArray = items
+		}
+	}
 
-        // Uncomment the following line to display an Edit button in the navigation bar for this view controller.
-        // self.navigationItem.rightBarButtonItem = self.editButtonItem
-    }
 
-    // MARK: - Table view data source
+	// MARK: - Table view data source
 
-    override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        // #warning Incomplete implementation, return the number of rows
-        return itemArray.count
-    }
+	override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+		// #warning Incomplete implementation, return the number of rows
+		return itemArray.count
+	}
 
 	override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
 		let cell = tableView.dequeueReusableCell(withIdentifier: "ToDoItemCell", for: indexPath)
@@ -44,9 +43,9 @@ class ListTableViewController: UITableViewController {
 		tableView.deselectRow(at: indexPath, animated: true)
 
 		if tableView.cellForRow(at: indexPath)?.accessoryType == .checkmark {
-			 tableView.cellForRow(at: indexPath)?.accessoryType = .none
+			tableView.cellForRow(at: indexPath)?.accessoryType = .none
 		} else {
-			 tableView.cellForRow(at: indexPath)?.accessoryType = .checkmark
+			tableView.cellForRow(at: indexPath)?.accessoryType = .checkmark
 		}
 	}
 
@@ -54,9 +53,10 @@ class ListTableViewController: UITableViewController {
 		let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
 		alert.addAction(UIAlertAction(title: "OK", style: .default) { (completion) in
 			print("Added item")
-			self.itemArray.append(alert.textFields?.first?.text ?? "")
+			self.itemArray.append(alert.textFields?.first?.text ?? "New Item")
+			UserDefaults.standard.set(self.itemArray, forKey: "items")
 			self.tableView.reloadData()
-			})
+		})
 		alert.addTextField { (textField) in
 			textField.placeholder = "Enter a to-do"
 		}
