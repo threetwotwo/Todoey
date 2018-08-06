@@ -14,13 +14,13 @@ class ListTableViewController: UITableViewController {
 		createAlert(title: "Add new item", message: "")
 	}
 
-	var itemArray: [String] = []
+	var itemArray: [Item] = []
 
 	override func viewDidLoad() {
 		super.viewDidLoad()
 
-		if let items = UserDefaults.standard.array(forKey: "items") as? [String] {
-			itemArray = items
+		for index in 1...100 {
+			itemArray.append(Item(title: "Item \(index)", done: false))
 		}
 	}
 
@@ -34,7 +34,11 @@ class ListTableViewController: UITableViewController {
 
 	override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
 		let cell = tableView.dequeueReusableCell(withIdentifier: "ToDoItemCell", for: indexPath)
-		cell.textLabel?.text = itemArray[indexPath.row]
+		let item = itemArray[indexPath.row]
+
+		cell.textLabel?.text = item.title
+		cell.accessoryType = item.done ? .checkmark : .none
+
 		return cell
 	}
 
@@ -42,19 +46,16 @@ class ListTableViewController: UITableViewController {
 	override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
 		tableView.deselectRow(at: indexPath, animated: true)
 
-		if tableView.cellForRow(at: indexPath)?.accessoryType == .checkmark {
-			tableView.cellForRow(at: indexPath)?.accessoryType = .none
-		} else {
-			tableView.cellForRow(at: indexPath)?.accessoryType = .checkmark
-		}
+		itemArray[indexPath.row].done = !itemArray[indexPath.row].done
+
+		tableView.reloadRows(at: [indexPath], with: .automatic)
 	}
 
 	func createAlert(title: String, message: String) {
 		let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
 		alert.addAction(UIAlertAction(title: "OK", style: .default) { (completion) in
 			print("Added item")
-			self.itemArray.append(alert.textFields?.first?.text ?? "New Item")
-			UserDefaults.standard.set(self.itemArray, forKey: "items")
+			self.itemArray.append(Item(title: alert.textFields![0].text ?? "", done: false))
 			self.tableView.reloadData()
 		})
 		alert.addTextField { (textField) in
