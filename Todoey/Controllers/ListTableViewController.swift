@@ -7,7 +7,7 @@
 //
 
 import UIKit
-import CoreData
+import RealmSwift
 
 class ListTableViewController: UITableViewController {
 
@@ -18,13 +18,13 @@ class ListTableViewController: UITableViewController {
 	}
 
 	//MARK: - variables
+	let realm = try! Realm()
 	var selectedCategory: Category? {
 		didSet{
 			loadItems()
 		}
 	}
-	var itemArray: [Item] = []
-	let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
+	var items: Results<Item>?
 
 	//MARK: - View Controller life cycle
 
@@ -37,23 +37,31 @@ class ListTableViewController: UITableViewController {
 
 	override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
 		// #warning Incomplete implementation, return the number of rows
-		return itemArray.count
+		return items?.count ?? 1
 	}
 
 	override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
 		let cell = tableView.dequeueReusableCell(withIdentifier: "ToDoItemCell", for: indexPath)
-		let item = itemArray[indexPath.row]
-
-		cell.textLabel?.text = item.title
-		cell.accessoryType = item.done ? .checkmark : .none
-
+		if let item = items?[indexPath.row] {
+			cell.textLabel?.text = item.title
+			cell.accessoryType = item.done ? .checkmark : .none
+		} else {
+			cell.textLabel?.text = "No items added"
+		}
 		return cell
 	}
 
 	//MARK: - Table view delegate methods
 	override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-		itemArray[indexPath.row].done = !itemArray[indexPath.row].done
-		saveItems()
+		if let item = items?[indexPath.row] {
+			do {
+				try realm.write {
+					item.done = !item.done
+				}
+			} catch {
+				print("error updating item doneness")
+			}
+		}
 
 		tableView.reloadRows(at: [indexPath], with: .automatic)
 
@@ -64,14 +72,20 @@ class ListTableViewController: UITableViewController {
 		let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
 		alert.addAction(UIAlertAction(title: "OK", style: .default) { (completion) in
 			print("Added item")
-			let newItem = Item(context: self.context)
-			newItem.done = false
-			newItem.title = alert.textFields![0].text!
-			newItem.parentCategory = self.selectedCategory
-			self.itemArray.append(newItem)
 
+			if let category = self.selectedCategory {
+				do {
+					try self.realm.write {
+						let newItem = Item()
+						newItem.dateCreated = Date()
+						newItem.title = alert.textFields![0].text!
+						category.items.append(newItem)
+					}
+				} catch {
+					print(error)
+				}
+			}
 			self.tableView.reloadData()
-			self.saveItems()
 		})
 		alert.addTextField { (textField) in
 			textField.placeholder = "Enter a to-do"
@@ -79,26 +93,8 @@ class ListTableViewController: UITableViewController {
 		present(alert, animated: true)
 	}
 
-	func saveItems() {
-		do {
-			try context.save()
-		} catch {
-			print(error.localizedDescription)
-			}
-		}
-
-	func loadItems(with request: NSFetchRequest<Item> = Item.fetchRequest(), predicate: NSPredicate? = nil) {
-		let categoryPredicate = NSPredicate(format: "parentCategory.name MATCHES %@", selectedCategory!.name!)
-		if let additionalPredicate = predicate {
-			request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [categoryPredicate, additionalPredicate])
-		} else {
-			request.predicate = categoryPredicate
-		}
-		do {
-			itemArray = try context.fetch(request)
-		} catch {
-			print("Error fetching data")
-		}
+	func loadItems() {
+		items = selectedCategory?.items.sorted(byKeyPath: "title")
 	}
 }
 
@@ -107,11 +103,7 @@ class ListTableViewController: UITableViewController {
 extension ListTableViewController: UISearchBarDelegate {
 
 	fileprivate func loadItems(from searchBar: UISearchBar) {
-		let request: NSFetchRequest<Item> = Item.fetchRequest()
-		let searchPredicate = NSPredicate(format: "title CONTAINS[cd] %@", searchBar.text!)
-		request.predicate = searchPredicate
-		request.sortDescriptors = [NSSortDescriptor(key: "title", ascending: true)]
-		loadItems(with: request, predicate: searchPredicate)
+		items = selectedCategory?.items.filter("title CONTAINS[cd] %@", searchBar.text!).sorted(byKeyPath: "dateCreated", ascending: false)
 	}
 
 	func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
